@@ -1,0 +1,52 @@
+FROM ubuntu:24.04
+
+ENV HOME="/home/build/"
+
+# Noninteractive frontend so tzdata doesn't block
+ENV DEBIAN_FRONTEND=noninteractive
+
+# setup buildenv
+RUN apt-get update && apt-get install -y \
+    gcc g++ binutils patch bzip2 make \
+    unzip zlib1g-dev libc6-dev subversion libncurses5-dev gawk \
+    sharutils curl libxml-parser-perl ocaml-nox ocaml zstd ocaml-findlib \
+    python3-yaml libssl-dev libfdt-dev lzop coccinelle cproto \
+    build-essential git autoconf ocamlbuild wget python-is-python3 \
+    vim file rsync curl gcc-multilib libudev-dev libusb-1.0-0-dev \
+    automake autotools-dev python3 libmpc-dev libmpfr-dev libgmp-dev \
+    bison flex texinfo gperf libtool patchutils bc libexpat-dev \
+    pkg-config
+
+# setup RISCV toolchain
+RUN apt-get update && apt-get install -y \
+    gcc-riscv64-unknown-elf binutils-riscv64-unknown-elf libnewlib-dev
+
+RUN mkdir -p /home/build && chown $USER:$USER /home/build/
+
+WORKDIR /home/build
+# Install Rust
+RUN curl https://sh.rustup.rs -sSf > /tmp/rustup-init.sh \
+    && chmod +x /tmp/rustup-init.sh \
+    && sh /tmp/rustup-init.sh -y \
+    && rm -rf /tmp/rustup-init.sh
+
+ENV PATH="$PATH:$HOME/.cargo/bin"
+
+# Update the local crate index
+RUN cargo search
+
+# Install nightly rust.
+RUN rustup install stable
+
+
+# install wlink flasher
+RUN cargo install --git https://github.com/ch32-rs/wlink
+
+# Default command
+CMD ["/bin/bash"]
+
+#build:
+#docker build -t ch .
+
+#run:
+#docker run --rm -it -v "$PWD":/src/ -w /home/build/ ch
