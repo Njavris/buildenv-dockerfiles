@@ -49,6 +49,9 @@ CMD ["/bin/bash"]
 #docker build -t ch .
 
 #run:
-#docker run --rm -it -v "$PWD":/src/ -w /home/build/ ch
+#docker run --rm -it -w /home/build/ -v "$PWD":/home/build/src/ --privileged -v /dev/bus/usb:/dev/bus/usb ch
+
+
 
 #git clone git@github.com:cnlohr/ch32fun.git
+#make FLASH_COMMAND="wlink flash blink.bin"
