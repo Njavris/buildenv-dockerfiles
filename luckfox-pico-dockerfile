@@ -1,0 +1,97 @@
+FROM ubuntu:24.04
+
+# Stop interactive prompts from blocking the build
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Install Luckfox SDK & Buildroot dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+	build-essential \
+	wget \
+	bc \
+	libssl-dev \
+	libncurses-dev \
+	python3 \
+	python3-pip \
+	ca-certificates \
+	u-boot-tools \
+	device-tree-compiler \
+	git \
+	ssh \
+	make \
+	gcc \
+	g++ \
+	liblz4-tool \
+	expect \
+	patchelf \
+	chrpath \
+	gawk \
+	texinfo \
+	diffstat \
+	binfmt-support \
+	qemu-user-static \
+	live-build \
+	bison \
+	flex \
+	fakeroot \
+	cmake \
+	unzip \
+	ncurses-dev \
+	bzip2 \
+	expat \
+	gnupg \
+	libgmp-dev \
+	libmpc-dev \
+	python-is-python3 \
+	module-assistant \
+	gperf \
+	autoconf \
+	pkg-config \
+	passwd \
+	openssl \
+	openssh-server \
+	openssh-client \
+	vim \
+	file \
+	cpio \
+	rsync \
+	curl \
+	libsqlite3-dev \
+	libmpfr-dev \
+	coreutils \
+	less \
+	iputils-ping \
+	&& rm -rf /var/lib/apt/lists/*
+
+# Compile legacy Python 2.7.5 needed by older Rockchip build scripts
+ARG PYTHON_VERSION=2.7.5
+RUN wget https://www.python.org/ftp/python/$PYTHON_VERSION/Python-$PYTHON_VERSION.tgz \
+	&& tar --extract -f Python-$PYTHON_VERSION.tgz \
+	&& cd ./Python-$PYTHON_VERSION/ \
+	&& ./configure --enable-optimizations --prefix=/usr/local \
+	&& umask 022 \
+	&& make && make install \
+	&& cd ../ \
+	&& rm -r ./Python-$PYTHON_VERSION*
+
+# --- Dynamic Mac-to-Container User Mapping ---
+# Buildroot will fail if built as root. These args will match your Mac UID/GID.
+ARG USER_ID=1000
+ARG GROUP_ID=1000
+
+RUN groupadd -g ${GROUP_ID} luckfoxgroup || true && \
+    useradd -u ${USER_ID} -g ${GROUP_ID} -m -s /bin/bash luckfoxuser || \
+    useradd -m -s /bin/bash luckfoxuser
+
+# Set up work directory
+RUN mkdir -p /home/luckfox/sdk && chown -R ${USER_ID}:${GROUP_ID} /home/luckfox
+WORKDIR /home/luckfox/sdk
+
+# Drop down to the host-matched user privileges
+USER luckfoxuser
+
+CMD ["/bin/bash"]
+
+
+# docker build --platform linux/amd64 --build-arg USER_ID=$(id -u) --build-arg GROUP_ID=$(id -g) -t luckfox-buildroot-sdk .
+# docker run -it --rm --platform linux/amd64 -v "$(pwd)":/home/luckfox/sdk luckfox-buildroot-sdk
+# docker run -it --rm --platform linux/amd64  -v "$(pwd)":/home/luckfox/sdk_og -v luckfox-sdk-storage:/home/luckfox/sdk luckfox-buildroot-sdk
